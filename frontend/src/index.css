@@ -1,0 +1,84 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-0: #0a0f14;
+  --bg-1: #0f1621;
+  --bg-2: #121a25;
+  --accent: #00d6f9;
+  --accent-2: #7ce0b5;
+  --muted: #7b8a97;
+  --danger: #ff5f6d;
+  --warning: #ffb347;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(900px 600px at 10% -10%, #163042 0%, transparent 60%),
+    radial-gradient(700px 500px at 90% 0%, #1b1d2c 0%, transparent 55%),
+    linear-gradient(135deg, var(--bg-0), var(--bg-2));
+  color: #e7f0f7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.glass {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(135deg, rgba(18, 26, 36, 0.88), rgba(10, 14, 20, 0.78));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(22px);
+}
+
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(400px 240px at 8% 0%, rgba(0, 214, 249, 0.12), transparent 60%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glass > * {
+  position: relative;
+  z-index: 1;
+}
+
+.glass-media::after {
+  opacity: 0.35;
+}
+
+.grid-overlay {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 224, 255, 0.35) transparent;
+}
+
+.scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 224, 255, 0.35);
+  border-radius: 999px;
+}
