@@ -15,6 +15,7 @@ const VideoFeed = ({ canvasRef }: VideoFeedProps) => {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const lastDrawnRef = useRef<HTMLImageElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const sizeRef = useRef({ width: 0, height: 0, ratio: 0 });
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -26,10 +27,23 @@ const VideoFeed = ({ canvasRef }: VideoFeedProps) => {
     const resize = () => {
       const rect = container.getBoundingClientRect();
       const ratio = window.devicePixelRatio || 1;
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      const lastSize = sizeRef.current;
+
+      if (
+        width === lastSize.width &&
+        height === lastSize.height &&
+        ratio === lastSize.ratio
+      ) {
+        return;
+      }
+
+      sizeRef.current = { width, height, ratio };
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
     };
 
     resize();

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef } from "react";
-import { motion } from "framer-motion";
 import TopBar from "./components/TopBar";
 import VideoFeed from "./components/VideoFeed";
 import LineTrendChart from "./components/LineTrendChart";
@@ -81,67 +80,54 @@ const App = () => {
   );
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-10">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mx-auto flex max-w-7xl flex-col gap-8"
-      >
+    <div className="h-screen w-full overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-6 overflow-hidden">
         <div className="glass rounded-3xl px-6 py-5">
           <TopBar />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2.3fr_1fr]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="min-h-[420px]"
-          >
-            <VideoFeed canvasRef={canvasRef} />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="flex flex-col gap-6"
-          >
-            <div className="grid grid-cols-2 gap-4">
-              <MetricCard
-                label="Total Flow"
-                value={formatNumber(totalVehicles)}
-                hint="Vehicles in frame"
-              />
-              <MetricCard
-                label="Peak Density"
-                value={formatNumber(peakDensity)}
-                hint="Session max"
-              />
-              <MetricCard
-                label="Active Objects"
-                value={formatNumber(totals)}
-                hint="Current classes"
-              />
-              <MetricCard
-                label="Pedestrians"
-                value={formatNumber(counts.person)}
-                hint="People detected"
-              />
+        <div className="scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pr-2">
+          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[2.3fr_1fr] lg:items-stretch">
+            <div className="min-w-0 h-[420px]">
+              <VideoFeed canvasRef={canvasRef} />
             </div>
-            <PeakTrafficGauge />
-            <ControlPanel onCapture={captureSnapshot} onExport={exportSession} />
-          </motion.div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr]">
-          <LineTrendChart />
-          <ClassDistributionChart />
-        </div>
+            <div className="scrollbar min-w-0 flex h-[420px] flex-col gap-6 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-4">
+                <MetricCard
+                  label="Total Flow"
+                  value={formatNumber(totalVehicles)}
+                  hint="Vehicles in frame"
+                />
+                <MetricCard
+                  label="Peak Density"
+                  value={formatNumber(peakDensity)}
+                  hint="Session max"
+                />
+                <MetricCard
+                  label="Active Objects"
+                  value={formatNumber(totals)}
+                  hint="Current classes"
+                />
+                <MetricCard
+                  label="Pedestrians"
+                  value={formatNumber(counts.person)}
+                  hint="People detected"
+                />
+              </div>
+              <PeakTrafficGauge />
+              <ControlPanel onCapture={captureSnapshot} onExport={exportSession} />
+            </div>
+          </div>
 
-        <EventFeed />
-      </motion.div>
+          <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr]">
+            <LineTrendChart />
+            <ClassDistributionChart />
+          </div>
+
+          <EventFeed />
+        </div>
+      </div>
     </div>
   );
 };
