@@ -15,7 +15,7 @@ def _get_bool(value: str | None, default: bool = False) -> bool:
 class Settings:
   host: str = os.getenv("HOST", "0.0.0.0")
   port: int = int(os.getenv("PORT", "8000"))
-  enable_demo: bool = _get_bool(os.getenv("ENABLE_DEMO"), False)
+  enable_demo: bool = _get_bool(os.getenv("ENABLE_DEMO"), True)
   demo_fps: int = int(os.getenv("DEMO_FPS", "12"))
 
 
