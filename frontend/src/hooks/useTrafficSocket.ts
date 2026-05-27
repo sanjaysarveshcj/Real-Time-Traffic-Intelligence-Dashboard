@@ -12,6 +12,10 @@ export const useTrafficSocket = () => {
   const ingestMetrics = useTrafficStore((state) => state.ingestMetrics);
   const addLocalEvent = useTrafficStore((state) => state.addLocalEvent);
 
+  const throttledUpdateFrame = useMemo(
+    () => throttle(updateFrame, 16),
+    [updateFrame]
+  );
   const throttledIngest = useMemo(
     () => throttle(ingestMetrics, 120),
     [ingestMetrics]
@@ -42,7 +46,7 @@ export const useTrafficSocket = () => {
         try {
           const payload = JSON.parse(event.data) as TrafficPayload;
           if (payload.frame) {
-            updateFrame(payload.frame);
+            throttledUpdateFrame(payload.frame);
           }
           throttledIngest(payload);
         } catch {
@@ -76,5 +80,5 @@ export const useTrafficSocket = () => {
       active = false;
       wsRef.current?.close();
     };
-  }, [setConnection, updateFrame, throttledIngest, addLocalEvent]);
+  }, [setConnection, throttledUpdateFrame, throttledIngest, addLocalEvent]);
 };

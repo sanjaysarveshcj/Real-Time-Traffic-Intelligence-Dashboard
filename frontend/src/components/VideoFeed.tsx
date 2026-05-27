@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTrafficStore } from "../store/useTrafficStore";
 import { formatNumber } from "../utils/format";
 
@@ -6,16 +6,52 @@ type VideoFeedProps = {
   canvasRef: React.RefObject<HTMLCanvasElement>;
 };
 
+const base64ToBlob = (base64: string, mimeType: string) => {
+  const binary = window.atob(base64);
+  const length = binary.length;
+  const bytes = new Uint8Array(length);
+
+  for (let i = 0; i < length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+};
+
 const VideoFeed = ({ canvasRef }: VideoFeedProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const frame = useTrafficStore((state) => state.frame);
   const fps = useTrafficStore((state) => state.fps);
   const counts = useTrafficStore((state) => state.counts);
   const totalVehicles = useTrafficStore((state) => state.totalVehicles);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const lastDrawnRef = useRef<HTMLImageElement | null>(null);
+  const [hasFrame, setHasFrame] = useState(false);
   const rafRef = useRef<number | null>(null);
   const sizeRef = useRef({ width: 0, height: 0, ratio: 0 });
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const pendingBitmapRef = useRef<ImageBitmap | null>(null);
+  const drawPendingRef = useRef(false);
+  const latestFrameRef = useRef<string | null>(null);
+  const decodingRef = useRef(false);
+  const activeRef = useRef(true);
+  const hasFrameRef = useRef(false);
+
+  const scheduleDraw = useCallback(() => {
+    if (drawPendingRef.current) {
+      return;
+    }
+    drawPendingRef.current = true;
+    rafRef.current = window.requestAnimationFrame(() => {
+      drawPendingRef.current = false;
+      const ctx = ctxRef.current;
+      const canvas = canvasRef.current;
+      const bitmap = pendingBitmapRef.current;
+      if (!ctx || !canvas || !bitmap) {
+        return;
+      }
+      const ratio = sizeRef.current.ratio || window.devicePixelRatio || 1;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.drawImage(bitmap, 0, 0, canvas.width / ratio, canvas.height / ratio);
+    });
+  }, [canvasRef]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -53,44 +89,103 @@ const VideoFeed = ({ canvasRef }: VideoFeedProps) => {
   }, [canvasRef]);
 
   useEffect(() => {
-    if (!frame) {
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
-      imageRef.current = img;
-    };
-    img.src = `data:image/jpeg;base64,${frame}`;
-  }, [frame]);
-
-  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) {
       return;
     }
+    ctxRef.current = ctx;
+    return () => {
+      ctxRef.current = null;
+    };
+  }, [canvasRef]);
 
-    const draw = () => {
-      const img = imageRef.current;
-      if (img && img !== lastDrawnRef.current) {
-        const ratio = window.devicePixelRatio || 1;
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        ctx.drawImage(img, 0, 0, canvas.width / ratio, canvas.height / ratio);
-        lastDrawnRef.current = img;
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+      latestFrameRef.current = null;
+      hasFrameRef.current = false;
+    };
+  }, []);
+
+  const requestDecode = useCallback(() => {
+    if (decodingRef.current) {
+      return;
+    }
+
+    const decodeLatest = async () => {
+      decodingRef.current = true;
+      while (activeRef.current && latestFrameRef.current) {
+        const nextFrame = latestFrameRef.current;
+        latestFrameRef.current = null;
+        try {
+          const bitmap = await createImageBitmap(
+            base64ToBlob(nextFrame, "image/jpeg")
+          );
+          if (!activeRef.current) {
+            bitmap.close();
+            break;
+          }
+          const previous = pendingBitmapRef.current;
+          pendingBitmapRef.current = bitmap;
+          if (previous) {
+            previous.close();
+          }
+          scheduleDraw();
+        } catch {
+          // Ignore decode failures.
+        }
       }
-      rafRef.current = window.requestAnimationFrame(draw);
+      decodingRef.current = false;
     };
 
-    rafRef.current = window.requestAnimationFrame(draw);
+    void decodeLatest();
+  }, [scheduleDraw]);
+
+  useEffect(() => {
+    let lastFrame: string | null = null;
+
+    const unsubscribe = useTrafficStore.subscribe((state) => {
+      const nextFrame = state.frame;
+      if (nextFrame === lastFrame) {
+        return;
+      }
+      lastFrame = nextFrame;
+
+      if (nextFrame) {
+        latestFrameRef.current = nextFrame;
+        if (!hasFrameRef.current) {
+          hasFrameRef.current = true;
+          setHasFrame(true);
+        }
+        requestDecode();
+        return;
+      }
+
+      if (hasFrameRef.current) {
+        hasFrameRef.current = false;
+        setHasFrame(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [requestDecode]);
+
+  useEffect(() => {
     return () => {
       if (rafRef.current) {
         window.cancelAnimationFrame(rafRef.current);
       }
+      if (pendingBitmapRef.current) {
+        pendingBitmapRef.current.close();
+        pendingBitmapRef.current = null;
+      }
     };
-  }, [canvasRef]);
+  }, []);
 
   return (
     <div
@@ -98,7 +193,7 @@ const VideoFeed = ({ canvasRef }: VideoFeedProps) => {
       className="relative h-full w-full overflow-hidden rounded-3xl glass glass-media grid-overlay"
     >
       <canvas ref={canvasRef} className="h-full w-full" />
-      {!frame ? (
+      {!hasFrame ? (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-400">
           Waiting for live stream...
         </div>
